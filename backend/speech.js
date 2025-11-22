@@ -2,41 +2,38 @@ const speech = require('@google-cloud/speech');
 const fs = require('fs');
 const path = require('path');
 
-// Set Google credentials
 process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(__dirname, 'key.json');
 
 async function transcribeAudio(audioFilePath) {
     try {
-        // Check if file exists
         if (!fs.existsSync(audioFilePath)) {
             throw new Error(`Audio file not found: ${audioFilePath}`);
         }
 
-        // Initialize Google Speech client
         const client = new speech.SpeechClient();
-
-        // Read audio file
         const audioBytes = fs.readFileSync(audioFilePath).toString('base64');
 
-        // Configure the request
+        console.log('Processing WebM file with 48kHz configuration...');
+
+        // Use 48000 Hz to match the WebM file
         const request = {
             audio: {
                 content: audioBytes,
             },
             config: {
-                encoding: 'WEBM_OPUS', // Adjust based on your audio format
-                sampleRateHertz: 48000,
+                encoding: 'WEBM_OPUS',
+                sampleRateHertz: 48000, // Match the actual WebM sample rate
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
+                model: 'default',
+                audioChannelCount: 1, // Force mono
             },
         };
 
         console.log('Sending to Google Speech-to-Text...');
         
-        // Detect speech
         const [response] = await client.recognize(request);
         
-        // Process the response
         if (!response.results || response.results.length === 0) {
             return {
                 success: false,
@@ -62,7 +59,6 @@ async function transcribeAudio(audioFilePath) {
 
     } catch (error) {
         console.error('ERROR in transcribeAudio:', error);
-        
         return {
             success: false,
             error: error.message,
