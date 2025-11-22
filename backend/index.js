@@ -30,23 +30,12 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('audio/')) {
+    if (true) {
       cb(null, true);
     } else {
       cb(new Error('Only audio files are allowed!'), false);
     }
   }
-});
-
-// Your existing data
-const data = [
-  { id: 1, name: "Item 1" },
-  { id: 2, name: "Item 2" },
-];
-
-// Your existing route
-app.get("/api/items", (req, res) => {
-  res.json(data);
 });
 
 // NEW: Speech transcription route
@@ -99,7 +88,6 @@ app.get("/api/health", (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
   console.log('Available endpoints:');
-  console.log('  GET  /api/items');
   console.log('  GET  /api/health');
   console.log('  POST /api/transcribe');
 });
