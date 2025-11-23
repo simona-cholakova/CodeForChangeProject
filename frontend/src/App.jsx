@@ -1,7 +1,5 @@
-import { useState, useRef } from "react";
-
+import { useState, useRef, useEffect } from "react";
 import "./App.css";
-
 
 function App() {
   const [recordingStatus, setRecordingStatus] = useState("stopped");
@@ -12,9 +10,72 @@ function App() {
   const streamRef = useRef(null);
   const timerRef = useRef(null);
 
-  // File upload
   const [isFileUploading, setIsFileUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (!isInputFocused()) {
+        if ((event.key === 'S' || event.key === 's')) {
+          event.preventDefault(); 
+          handleRecordButtonClick();
+        } else if ((event.key === 'U' || event.key === 'u')) {
+          event.preventDefault();
+          handleUploadShortcut();
+        }
+      }
+    };
+
+    const isInputFocused = () => {
+      const activeElement = document.activeElement;
+      return (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.isContentEditable
+      );
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [recordingStatus, isUploading, selectedFile]);
+
+  const handleUploadShortcut = () => {
+    if (selectedFile) {
+      // If file is already selected, upload it
+      handleFileUpload();
+    } else {
+      // If no file selected, open file explorer
+      fileInputRef.current?.click();
+    }
+  };
+
+  const speak = (text) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      const voices = window.speechSynthesis.getVoices();
+      const englishVoice = voices.find(voice => 
+        voice.lang.includes('en') && voice.name.includes('Female')
+      );
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+      }
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.log("Text-to-speech not supported in this browser");
+    }
+  };
 
   const startRecording = async () => {
     try {
@@ -54,6 +115,8 @@ function App() {
       mediaRecorder.start(1000);
       setRecordingStatus("recording");
 
+      speak("Recording started");
+
       let seconds = 0;
       timerRef.current = setInterval(() => {
         seconds++;
@@ -61,6 +124,7 @@ function App() {
       }, 1000);
     } catch (error) {
       console.error("Error starting recording:", error);
+      speak("Cannot access microphone");
       alert("Cannot access microphone.");
     }
   };
@@ -70,14 +134,21 @@ function App() {
       mediaRecorderRef.current.stop();
       setRecordingStatus("stopped");
 
+      speak("Recording stopped");
+
       if (timerRef.current) clearInterval(timerRef.current);
       if (streamRef.current)
         streamRef.current.getTracks().forEach((t) => t.stop());
     }
   };
 
-  const handleRecordButtonClick = () =>
-    recordingStatus === "recording" ? stopRecording() : startRecording();
+  const handleRecordButtonClick = () => {
+    if (recordingStatus === "recording") {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
 
   const sendToBackend = async (audioBlob) => {
     setIsUploading(true);
@@ -94,12 +165,15 @@ function App() {
       const result = await res.json();
 
       if (result.success) {
+        speak(`Transcription: ${result.transcription}`);
         alert(`Transcription: ${result.transcription}`);
       } else {
+        speak("Transcription failed");
         alert(`Error: ${result.error}`);
       }
     } catch (err) {
       console.error(err);
+      speak("Upload failed");
       alert("Upload failed.");
     } finally {
       setIsUploading(false);
@@ -115,18 +189,23 @@ function App() {
       .padStart(2, "0")}`;
   };
 
-
   const handleFileSelect = (event) => {
-    setSelectedFile(event.target.files[0]);
+    const file = event.target.files[0];
+    setSelectedFile(file);
+    if (file) {
+      speak(`File selected: ${file.name}`);
+    }
   };
 
   const handleFileUpload = async () => {
     if (!selectedFile) {
+      speak("Please select a file");
       alert("Please select a file.");
       return;
     }
 
     setIsFileUploading(true);
+    speak("Uploading file");
 
     try {
       const formData = new FormData();
@@ -143,20 +222,24 @@ function App() {
       const result = await response.json();
 
       if (result.success) {
+        speak("File uploaded successfully");
         alert(`File uploaded: ${result.filename}`);
         setSelectedFile(null);
-        document.getElementById("file-input").value = "";
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       } else {
+        speak("Upload failed");
         alert(`Upload failed: ${result.error}`);
       }
     } catch (error) {
       console.error(error);
+      speak("Upload failed");
       alert("Upload failed.");
     } finally {
       setIsFileUploading(false);
     }
   };
-
 
   return (
     <div className="app-card">
@@ -164,7 +247,6 @@ function App() {
 
       <div>
         <strong>
-          {/* Status: {recordingStatus}{" "} */}
           {recordingTime > 0 && `- ${formatTime(recordingTime)}`}
         </strong>
       </div>
@@ -186,27 +268,45 @@ function App() {
           ? "Uploading..."
           : recordingStatus === "recording"
           ? "Stop & Transcribe"
-          : "Start Recording (Mono)"}
+          : "Start Recording"}
       </button>
-
 
       {recordingStatus === "recording" && (
         <div style={{ color: "red", marginTop: "10px" }}>
-          ● Recording MONO audio...
+          ● Recording audio... (Press S to stop)
         </div>
       )}
 
       <h2 style={{ marginTop: "40px" }}>Upload File</h2>
 
-      <input id="file-input" type="file" onChange={handleFileSelect} />
+      <input 
+        id="file-input" 
+        type="file" 
+        onChange={handleFileSelect}
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+      />
+
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        style={{ marginRight: "10px", padding: "10px 20px" }}
+      >
+        Select File
+      </button>
 
       <button
         onClick={handleFileUpload}
         disabled={!selectedFile || isFileUploading}
-        style={{ marginLeft: "10px", padding: "10px 20px" }}
+        style={{ padding: "10px 20px" }}
       >
         {isFileUploading ? "Uploading..." : "Upload File"}
       </button>
+
+      {selectedFile && (
+        <div style={{ marginTop: "10px", color: "#666" }}>
+          Selected: {selectedFile.name} (Press U to upload)
+        </div>
+      )}
     </div>
   );
 }
