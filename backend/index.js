@@ -32,9 +32,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     if (true) {
       cb(null, true);
-    } else {
-      cb(new Error('Only audio files are allowed!'), false);
-    }
+    } 
   }
 });
 
