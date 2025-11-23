@@ -2,7 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
-const { transcribeAudio } = require("./speech"); // Import your speech function
+const { transcribeAudio } = require("./speech"); 
+const { summarizeFile } = require("./summarize"); 
 
 const app = express();
 const port = 5000;
@@ -76,6 +77,12 @@ app.post("/api/transcribe", upload.single('audio'), async (req, res) => {
   }
 });
 
+app.post("/api/test-summarize", async (req, res) => {
+  const { message } = req.body;
+  const result = await summarizeFile(message);
+  res.json(result);
+});
+
 // NEW: Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({ 
@@ -90,4 +97,5 @@ app.listen(port, () => {
   console.log('Available endpoints:');
   console.log('  GET  /api/health');
   console.log('  POST /api/transcribe');
+  console.log('  POST /api/test-summarize');
 });
