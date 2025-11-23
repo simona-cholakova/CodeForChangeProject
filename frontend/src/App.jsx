@@ -164,7 +164,7 @@ function App() {
 
       <div>
         <strong>
-          Status: {recordingStatus}{" "}
+          {/* Status: {recordingStatus}{" "} */}
           {recordingTime > 0 && `- ${formatTime(recordingTime)}`}
         </strong>
       </div>
@@ -189,11 +189,6 @@ function App() {
           : "Start Recording (Mono)"}
       </button>
 
-      <div style={{ marginBottom: "20px" }}>
-        <button>
-          
-        </button>
-      </div>
 
       {recordingStatus === "recording" && (
         <div style={{ color: "red", marginTop: "10px" }}>
