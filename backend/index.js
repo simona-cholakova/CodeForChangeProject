@@ -2,7 +2,11 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
-const { transcribeAudio } = require("./speech"); // Import your speech function
+const { transcribeAudio } = require("./speech"); 
+const { summarizeFile } = require("./summarize"); 
+
+const fs = require('fs');
+
 
 const app = express();
 const port = 5000;
@@ -10,6 +14,9 @@ const port = 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+app.use('/uploads', express.static('uploads'));
+
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -27,14 +34,23 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (true) {
-      cb(null, true);
-    } 
+const materialStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/';
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + '-' + file.originalname;
+    cb(null, uniqueName);
   }
 });
+
+
+const upload = multer({ storage: storage });
+const materialUpload = multer({ storage: materialStorage });
+
+
 
 // NEW: Speech transcription route
 app.post("/api/transcribe", upload.single('audio'), async (req, res) => {
@@ -74,6 +90,23 @@ app.post("/api/transcribe", upload.single('audio'), async (req, res) => {
   }
 });
 
+  app.post('/api/upload-material', materialUpload.single('file'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    res.json({
+      success: true,
+      filename: req.file.filename,
+      path: `/uploads/${req.file.filename}`
+    });
+  });
+
+app.post("/api/test-summarize", async (req, res) => {
+  const { message } = req.body;
+  const result = await summarizeFile(message);
+  res.json(result);
+});
+
 // NEW: Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({ 
@@ -88,4 +121,7 @@ app.listen(port, () => {
   console.log('Available endpoints:');
   console.log('  GET  /api/health');
   console.log('  POST /api/transcribe');
+  console.log('  POST /api/test-summarize');
 });
+
+

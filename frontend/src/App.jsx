@@ -1,5 +1,8 @@
 import { useState, useRef } from "react";
 
+import "./App.css";
+
+
 function App() {
   const [recordingStatus, setRecordingStatus] = useState("stopped");
   const [recordingTime, setRecordingTime] = useState(0);
@@ -9,27 +12,28 @@ function App() {
   const streamRef = useRef(null);
   const timerRef = useRef(null);
 
+  // File upload
+  const [isFileUploading, setIsFileUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+
   const startRecording = async () => {
     try {
-      // Force mono audio with explicit constraints
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          channelCount: 1, // MONO - this is the key!
-          sampleRate: 16000, // 16kHz
+          channelCount: 1,
+          sampleRate: 16000,
           sampleSize: 16,
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
         },
-        video: false
       });
 
       streamRef.current = stream;
       audioChunksRef.current = [];
 
-      // Create media recorder
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm; codecs=opus'
+        mimeType: "audio/webm; codecs=opus",
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -41,24 +45,23 @@ function App() {
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
         sendToBackend(audioBlob);
       };
 
-      // Start recording
-      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorder.start(1000);
       setRecordingStatus("recording");
-      
-      // Start timer
+
       let seconds = 0;
       timerRef.current = setInterval(() => {
         seconds++;
         setRecordingTime(seconds);
       }, 1000);
-
     } catch (error) {
-      console.error('Error starting recording:', error);
-      alert('Cannot access microphone. Please check permissions.');
+      console.error("Error starting recording:", error);
+      alert("Cannot access microphone.");
     }
   };
 
@@ -66,108 +69,149 @@ function App() {
     if (mediaRecorderRef.current && recordingStatus === "recording") {
       mediaRecorderRef.current.stop();
       setRecordingStatus("stopped");
-      
-      // Stop timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      
-      // Stop all tracks
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (streamRef.current)
+        streamRef.current.getTracks().forEach((t) => t.stop());
     }
   };
 
-  const handleRecordButtonClick = () => {
-    if (recordingStatus === "recording") {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  };
+  const handleRecordButtonClick = () =>
+    recordingStatus === "recording" ? stopRecording() : startRecording();
 
   const sendToBackend = async (audioBlob) => {
     setIsUploading(true);
+
     try {
       const formData = new FormData();
       formData.append("audio", audioBlob, `recording-${Date.now()}.webm`);
 
-      const response = await fetch("http://localhost:5000/api/transcribe", {
+      const res = await fetch("http://localhost:5000/api/transcribe", {
         method: "POST",
         body: formData,
       });
 
-      const result = await response.json();
-      
+      const result = await res.json();
+
       if (result.success) {
-        console.log("Transcription:", result.transcription);
         alert(`Transcription: ${result.transcription}`);
       } else {
-        console.error("Error:", result.error);
         alert(`Error: ${result.error}`);
       }
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert("Upload failed. Check console for details.");
+    } catch (err) {
+      console.error(err);
+      alert("Upload failed.");
     } finally {
       setIsUploading(false);
       setRecordingTime(0);
     }
   };
 
-  const getButtonText = () => {
-    if (isUploading) return "Uploading...";
-    if (recordingStatus === "recording") return "Stop & Transcribe";
-    return "Start Recording (Mono)";
-  };
-
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
+
+  const handleFileSelect = (event) => {
+    setSelectedFile(event.target.files[0]);
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) {
+      alert("Please select a file.");
+      return;
+    }
+
+    setIsFileUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const response = await fetch(
+        "http://localhost:5000/api/upload-material",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(`File uploaded: ${result.filename}`);
+        setSelectedFile(null);
+        document.getElementById("file-input").value = "";
+      } else {
+        alert(`Upload failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Upload failed.");
+    } finally {
+      setIsFileUploading(false);
+    }
+  };
+
+
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
-      <h1>Voice Recorder (MONO 16kHz)</h1>
-      
-      <div style={{ marginBottom: "20px" }}>
-        <span style={{ fontSize: "18px", fontWeight: "bold" }}>
-          Status: {recordingStatus} {recordingTime > 0 && `- ${formatTime(recordingTime)}`}
-        </span>
+    <div className="app-card">
+      <h1>Start Talking</h1>
+
+      <div>
+        <strong>
+          Status: {recordingStatus}{" "}
+          {recordingTime > 0 && `- ${formatTime(recordingTime)}`}
+        </strong>
       </div>
 
+      <button
+        onClick={handleRecordButtonClick}
+        disabled={isUploading}
+        style={{
+          padding: "15px 30px",
+          marginTop: "20px",
+          backgroundColor:
+            recordingStatus === "recording" ? "#ff4444" : "#4CAF50",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+        }}
+      >
+        {isUploading
+          ? "Uploading..."
+          : recordingStatus === "recording"
+          ? "Stop & Transcribe"
+          : "Start Recording (Mono)"}
+      </button>
+
       <div style={{ marginBottom: "20px" }}>
-        <button
-          onClick={handleRecordButtonClick}
-          disabled={isUploading}
-          style={{
-            padding: "15px 30px",
-            fontSize: "18px",
-            backgroundColor: recordingStatus === "recording" ? "#ff4444" : "#4CAF50",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: isUploading ? "not-allowed" : "pointer",
-            minWidth: "200px"
-          }}
-        >
-          {getButtonText()}
+        <button>
+          
         </button>
       </div>
 
       {recordingStatus === "recording" && (
-        <div style={{ color: "#ff4444", fontWeight: "bold" }}>
+        <div style={{ color: "red", marginTop: "10px" }}>
           ● Recording MONO audio...
         </div>
       )}
 
-      {isUploading && (
-        <div style={{ color: "#2196F3", fontWeight: "bold" }}>
-          Uploading and processing audio...
-        </div>
-      )}
+      <h2 style={{ marginTop: "40px" }}>Upload File</h2>
+
+      <input id="file-input" type="file" onChange={handleFileSelect} />
+
+      <button
+        onClick={handleFileUpload}
+        disabled={!selectedFile || isFileUploading}
+        style={{ marginLeft: "10px", padding: "10px 20px" }}
+      >
+        {isFileUploading ? "Uploading..." : "Upload File"}
+      </button>
     </div>
   );
 }
