@@ -90,16 +90,56 @@ app.post("/api/transcribe", upload.single('audio'), async (req, res) => {
   }
 });
 
-  app.post('/api/upload-material', materialUpload.single('file'), (req, res) => {
+  // In your index.js backend
+app.post("/api/upload-material", upload.single('file'), async (req, res) => {
+  try {
     if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No file uploaded' });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No file uploaded' 
+      });
     }
+
+    const folderName = req.body.folder; // Get folder name from form data
+    
+    let uploadPath = 'uploads/';
+    
+    // If folder name is provided, create subdirectory
+    if (folderName && folderName.trim() !== '') {
+      const safeFolderName = folderName.trim().replace(/[^a-zA-Z0-9-_]/g, '_');
+      uploadPath = `uploads/${safeFolderName}/`;
+      
+      // Create folder if it doesn't exist
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+        console.log(`Created folder: ${uploadPath}`);
+      }
+    }
+
+    // Move file to the appropriate folder
+    const newFileName = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(req.file.originalname);
+    const newFilePath = path.join(uploadPath, newFileName);
+    
+    fs.renameSync(req.file.path, newFilePath);
+
+    console.log(`File uploaded to: ${newFilePath}`);
+
     res.json({
       success: true,
-      filename: req.file.filename,
-      path: `/uploads/${req.file.filename}`
+      filename: req.file.originalname,
+      folderPath: uploadPath,
+      message: folderName ? `File uploaded to folder: ${folderName}` : 'File uploaded to default folder'
     });
-  });
+
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error' 
+    });
+  }
+});
+
 
 app.post("/api/test-summarize", async (req, res) => {
   const { message } = req.body;
