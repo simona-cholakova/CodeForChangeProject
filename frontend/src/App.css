@@ -1,42 +1,160 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+/* ===============================
+   GLOBAL THEME
+   Modern + high contrast + soft UI
+   =============================== */
+
+:root {
+  --bg: #f5f7fa;
+  --text: #111;
+  --primary: #0074e8;
+  --primary-hover: #005bbd;
+  --danger: #da1e28;
+  --danger-hover: #b01720;
+  --card-bg: #ffffff;
+  --border: #ccc;
+  --shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+
+/* ===============================
+   PAGE BASE STYLES
+   =============================== */
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  height: 100vh;
+  margin: 0;
+
+  display: flex;
+  justify-content: center; /* CENTER horizontally */
+  align-items: flex-start; /* Slightly toward top */
+  padding-top: 40px;
+}
+
+/* ===============================
+   CARD LAYOUT (main app box)
+   =============================== */
+
+.app-card {
+  background: var(--card-bg);
+  width: 95%;
+  max-width: 650px;
+  padding: 35px 45px;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ===============================
+   HEADINGS
+   =============================== */
+
+h1 {
+  font-size: 32px;
+  margin: 0;
+  font-weight: 700;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+h2 {
+  font-size: 24px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #ddd;
+  margin-top: 20px;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* ===============================
+   BUTTONS
+   =============================== */
+
+button {
+  font-size: 18px;
+  padding: 14px 26px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  width: 100%;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+button:hover {
+  background: var(--primary-hover);
 }
 
-.card {
-  padding: 2em;
+button:active {
+  transform: scale(0.98);
 }
 
-.read-the-docs {
-  color: #888;
+button:disabled {
+  background: #888;
+  cursor: not-allowed;
+}
+
+/* Focus outline for keyboard users */
+button:focus,
+input:focus {
+  outline: 4px solid #ffbf47;
+  outline-offset: 3px;
+}
+
+/* ===============================
+   RECORDING STATE INDICATOR
+   =============================== */
+
+.recording-indicator {
+  color: var(--danger);
+  font-weight: bold;
+  font-size: 20px;
+  text-align: center;
+}
+
+.recording-indicator::before {
+  content: "● ";
+  font-size: 26px;
+  vertical-align: middle;
+}
+
+/* ===============================
+   STATUS TEXT
+   =============================== */
+
+.status-text {
+  font-size: 20px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ===============================
+   FILE UPLOAD
+   =============================== */
+
+.upload-section {
+  margin-top: 18px;
+}
+
+input[type="file"] {
+  font-size: 16px;
+  padding: 10px;
+  width: 100%;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  background: #fafafa;
+}
+
+/* ===============================
+   SPACING UTILITIES
+   =============================== */
+
+.center {
+  text-align: center;
 }
