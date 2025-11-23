@@ -45,10 +45,8 @@ function App() {
 
   const handleUploadShortcut = () => {
     if (selectedFile) {
-      // If file is already selected, upload it
       handleFileUpload();
     } else {
-      // If no file selected, open file explorer
       fileInputRef.current?.click();
     }
   };
