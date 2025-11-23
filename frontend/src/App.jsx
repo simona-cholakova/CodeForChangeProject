@@ -157,6 +157,12 @@ function App() {
         </button>
       </div>
 
+      <div style={{ marginBottom: "20px" }}>
+        <button>
+          
+        </button>
+      </div>
+
       {recordingStatus === "recording" && (
         <div style={{ color: "#ff4444", fontWeight: "bold" }}>
           ● Recording MONO audio...
